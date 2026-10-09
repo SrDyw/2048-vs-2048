@@ -12,6 +12,7 @@ import {
   $opponentOver,
   $opponentScore,
   $phase,
+  $playerName,
   $roomCode,
   $seed,
   $solo,
@@ -39,6 +40,16 @@ export function App() {
   const opponentLeft = useStore($opponentLeft);
   const roomCode = useStore($roomCode);
   const solo = useStore($solo);
+
+  // Recupera y guarda el nombre del jugador en localStorage.
+  useEffect(() => {
+    const saved = localStorage.getItem("2048_player_name");
+    if (saved) $playerName.set(saved);
+    const unsubscribe = $playerName.subscribe((value) => {
+      localStorage.setItem("2048_player_name", value);
+    });
+    return unsubscribe;
+  }, []);
 
   // ----- Modo un jugador -----
   const startSolo = () => {

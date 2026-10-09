@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useStore } from "@nanostores/react";
-import { subscribeToChannel, unsubscribeFromChannel } from "@/lib/pusher-client";
+import { subscribeToChannel, unsubscribeFromChannel, setPusherPlayerName } from "@/lib/pusher-client";
 import {
   roomChannel,
   type ServerEvent,
@@ -27,6 +27,7 @@ import {
   $opponentScore,
   $opponentTiles,
   $phase,
+  $playerName,
   $players,
   $rematchPending,
   $rematchRejected,
@@ -99,6 +100,7 @@ export function useGame() {
     // generamos el codigo y entramos al lobby de inmediato. Un hipotetico
     // choque de codigos es practicamente imposible con 32^6 combinaciones.
     const code = generateRoomCode();
+    setPusherPlayerName($playerName.get());
     $isHost.set(true);
     $roomCode.set(code);
     $phase.set("lobby");
@@ -116,6 +118,7 @@ export function useGame() {
     // Nos suscribimos al canal y preguntamos si hay alguien. El host
     // respondera por el propio canal (mas fiable que consultar la REST API).
     joiningRef.current = true;
+    setPusherPlayerName($playerName.get());
     $busy.set(true);
     $isHost.set(false);
     $roomCode.set(code);

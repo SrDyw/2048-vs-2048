@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useStore } from "@nanostores/react";
-import { $busy, $error } from "@/stores/gameStore";
+import { $busy, $error, $playerName } from "@/stores/gameStore";
 import { CheckIcon, SpinnerIcon, UserIcon } from "./icons";
 import { Logo } from "./Logo";
 
@@ -17,6 +17,7 @@ export function Home({ onCreate, onJoin, onSolo }: HomeProps) {
   const [code, setCode] = useState("");
   const error = useStore($error);
   const busy = useStore($busy);
+  const name = useStore($playerName);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -33,6 +34,25 @@ export function Home({ onCreate, onJoin, onSolo }: HomeProps) {
       </div>
 
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#eee6d8]">
+        {/* Nombre del jugador */}
+        <label className="block text-sm font-semibold text-[var(--color-texto-2)] mb-2">
+          Tu nombre
+        </label>
+        <div className="relative mb-6">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[var(--color-acento)]">
+            <UserIcon className="w-5 h-5" />
+          </div>
+          <input
+            value={name}
+            onChange={(e) => $playerName.set(e.target.value)}
+            maxLength={16}
+            placeholder="Escribe tu nombre"
+            aria-label="Tu nombre"
+            disabled={busy}
+            className="w-full pl-12 pr-4 py-3 rounded-2xl bg-white border border-[var(--color-celda)] outline-none font-semibold text-[var(--color-texto)] focus:border-[var(--color-acento)] transition-colors disabled:opacity-60"
+          />
+        </div>
+
         <button
           type="button"
           onClick={onCreate}

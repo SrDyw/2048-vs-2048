@@ -3,6 +3,15 @@ import Pusher from "pusher-js";
 // Cliente de Pusher del navegador. Singleton para reutilizar la conexion.
 let pusherClient: Pusher | null = null;
 
+// Nombre del jugador actual. Se envia al endpoint de auth para el canal de
+// presencia (user_info.name). Se lee en cada peticion de autorizacion, asi que
+// puede cambiarse antes de suscribirse.
+let playerName = "Jugador";
+
+export function setPusherPlayerName(name: string) {
+  playerName = name.trim() || "Jugador";
+}
+
 export function getPusherClient(): Pusher {
   if (pusherClient) return pusherClient;
 
@@ -11,7 +20,11 @@ export function getPusherClient(): Pusher {
   pusherClient = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
     cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
     forceTLS: true,
-    authEndpoint: "/api/pusher/auth",
+    channelAuthorization: {
+      transport: "ajax",
+      endpoint: "/api/pusher/auth",
+      paramsProvider: () => ({ name: playerName }),
+    },
   });
 
   return pusherClient;

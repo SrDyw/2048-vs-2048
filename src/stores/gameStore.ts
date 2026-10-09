@@ -56,6 +56,9 @@ export const $error = atom<string>("");
 // Modo un jugador (sin rival ni Pusher).
 export const $solo = atom<boolean>(false);
 
+// Nombre del jugador (se puede cambiar antes de crear/unirse).
+export const $playerName = atom<string>("");
+
 // Reinicia el estado de la partida conservando la sala.
 export function resetMatchState(): void {
   $myScore.set(0);

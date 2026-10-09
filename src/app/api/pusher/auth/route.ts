@@ -49,7 +49,8 @@ export async function POST(request: Request) {
   const auth = pusherServer.authorizeChannel(socketId, channelName, {
     user_id: socketId,
     user_info: {
-      name: "Jugador",
+      // Nombre elegido por el jugador (saneado y limitado).
+      name: (body.name ?? "Jugador").toString().slice(0, 16).trim() || "Jugador",
     },
   });
 
