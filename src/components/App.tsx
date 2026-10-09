@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "@nanostores/react";
 import { useGame } from "@/hooks/useGame";
 import { randomSeed } from "@/lib/prng";
+import { clearSoloGame, hasSoloSave, loadSoloGame } from "@/lib/soloSave";
 import {
   $countdownFrom,
   $myOver,
@@ -16,6 +17,11 @@ import {
   $roomCode,
   $seed,
   $solo,
+  $soloRound,
+  $soloSaved,
+  $newRecord,
+  initHistory,
+  recordMatch,
   resetAll,
   resetMatchState,
 } from "@/stores/gameStore";
@@ -25,6 +31,7 @@ import { Countdown } from "./Countdown";
 import { GameView } from "./GameView";
 import { ResultScreen } from "./ResultScreen";
 import { SoloResult } from "./SoloResult";
+import { SoloStartDialog } from "./SoloStartDialog";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ExitIcon, HomeIcon } from "./icons";
 
@@ -41,7 +48,16 @@ export function App() {
   const opponentLeft = useStore($opponentLeft);
   const roomCode = useStore($roomCode);
   const solo = useStore($solo);
+  const soloRound = useStore($soloRound);
+  const soloSaved = useStore($soloSaved);
   const [showLeave, setShowLeave] = useState(false);
+  const [showSoloMenu, setShowSoloMenu] = useState(false);
+  const matchRecordedRef = useRef(false);
+
+  // Carga el historial guardado en localStorage.
+  useEffect(() => {
+    initHistory();
+  }, []);
 
   // Recupera y guarda el nombre del jugador en localStorage.
   useEffect(() => {
@@ -54,21 +70,47 @@ export function App() {
   }, []);
 
   // ----- Modo un jugador -----
+  // Empieza una partida nueva (descarta la guardada).
   const startSolo = () => {
     resetMatchState();
+    clearSoloGame();
+    $soloSaved.set(null);
     $solo.set(true);
     $seed.set(randomSeed());
+    $soloRound.set($soloRound.get() + 1);
     $phase.set("playing");
+  };
+
+  // Continua la partida guardada.
+  const continueSolo = () => {
+    const saved = loadSoloGame();
+    if (!saved) {
+      startSolo();
+      return;
+    }
+    resetMatchState();
+    $soloSaved.set(saved);
+    $solo.set(true);
+    $seed.set(0);
+    $soloRound.set($soloRound.get() + 1);
+    $phase.set("playing");
+  };
+
+  // Al pulsar "Jugar solo": si hay partida guardada, ofrece continuar o nueva.
+  const handleSolo = () => {
+    if (hasSoloSave()) {
+      setShowSoloMenu(true);
+    } else {
+      startSolo();
+    }
   };
 
   const replaySolo = () => {
-    $myOver.set(false);
-    $myScore.set(0);
-    $seed.set(randomSeed());
-    $phase.set("playing");
+    startSolo();
   };
 
   const exitSolo = () => {
+    // La partida queda guardada en localStorage para poder continuarla.
     resetAll();
   };
 
@@ -108,6 +150,35 @@ export function App() {
     }
   }, [solo, myOver, opponentOver, phase]);
 
+  // Registra en el historial la partida terminada (una vez por partida).
+  useEffect(() => {
+    if (phase === "playing" || phase === "countdown" || phase === "lobby") {
+      matchRecordedRef.current = false;
+      $newRecord.set(false);
+      return;
+    }
+    if (matchRecordedRef.current) return;
+
+    if (phase === "solo-result") {
+      matchRecordedRef.current = true;
+      recordMatch({ mode: "solo", score: myScore, result: "solo" });
+    } else if (phase === "result") {
+      matchRecordedRef.current = true;
+      const result =
+        myScore > opponentScore
+          ? "win"
+          : myScore < opponentScore
+            ? "lose"
+            : "draw";
+      recordMatch({
+        mode: "vs",
+        score: myScore,
+        opponentScore,
+        result,
+      });
+    }
+  }, [phase, myScore, opponentScore]);
+
   const showDisconnectOverlay =
     !solo && opponentLeft && roomCode !== "" && phase !== "home";
 
@@ -130,7 +201,7 @@ export function App() {
         <Home
           onCreate={game.createRoom}
           onJoin={game.joinRoom}
-          onSolo={startSolo}
+          onSolo={handleSolo}
         />
       )}
 
@@ -149,17 +220,18 @@ export function App() {
         />
       )}
 
-      {phase === "playing" && seed !== null && (
+      {phase === "playing" && (solo || seed !== null) && (
         <GameView
-          key={seed}
-          seed={seed}
+          key={solo ? `solo-${soloRound}` : seed}
+          seed={seed ?? 0}
           solo={solo}
+          saved={solo ? soloSaved : null}
           onSendMove={game.sendMove}
           onGameOver={solo ? () => {} : game.sendGameOver}
         />
       )}
 
-      {phase === "playing" && seed === null && (
+      {phase === "playing" && !solo && seed === null && (
         <p className="text-[var(--color-texto-2)]">Sincronizando partida...</p>
       )}
 
@@ -224,13 +296,27 @@ export function App() {
         title="¿Salir al inicio?"
         message={
           solo
-            ? "Se perdera el progreso de la partida."
+            ? "Tu partida se guardara y podras continuarla cuando quieras."
             : "Si sales, la sala se cerrara para ambos jugadores."
         }
         confirmLabel="Salir"
         cancelLabel="Seguir jugando"
         onConfirm={confirmLeave}
         onCancel={() => setShowLeave(false)}
+      />
+
+      {/* Eleccion al jugar solo con partida guardada */}
+      <SoloStartDialog
+        open={showSoloMenu}
+        onContinue={() => {
+          setShowSoloMenu(false);
+          continueSolo();
+        }}
+        onNew={() => {
+          setShowSoloMenu(false);
+          startSolo();
+        }}
+        onCancel={() => setShowSoloMenu(false)}
       />
     </main>
   );

@@ -26,6 +26,15 @@ export interface GameSnapshot {
   score: number;
 }
 
+// Estado serializable de una partida (para guardarla y continuarla).
+export interface SavedGame {
+  rngState: RngState;
+  nextId: number;
+  tiles: Tile[];
+  score: number;
+  gameOver: boolean;
+}
+
 export interface MoveResult {
   moved: boolean;
   // Fase 1 de la animacion: fichas deslizandose (sin fusionar todavia).
@@ -116,6 +125,28 @@ export class GameEngine {
 
   getSnapshot(): GameSnapshot {
     return { tiles: this.getTiles(), score: this.score };
+  }
+
+  // Serializa el estado completo para poder guardarlo.
+  serialize(): SavedGame {
+    return {
+      rngState: { s: this.rngState.s },
+      nextId: this.nextId,
+      tiles: this.getTiles(),
+      score: this.score,
+      gameOver: this.gameOver,
+    };
+  }
+
+  // Reconstruye un motor desde un estado guardado (sin generar fichas nuevas).
+  static fromSaved(saved: SavedGame): GameEngine {
+    const engine = Object.create(GameEngine.prototype) as GameEngine;
+    engine.rngState = { s: saved.rngState.s };
+    engine.nextId = saved.nextId;
+    engine.tiles = saved.tiles.map((t) => ({ ...t }));
+    engine.score = saved.score;
+    engine.gameOver = saved.gameOver;
+    return engine;
   }
 
   // Celdas vacias del tablero.

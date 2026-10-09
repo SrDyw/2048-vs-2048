@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useStore } from "@nanostores/react";
-import { $busy, $error, $playerName } from "@/stores/gameStore";
-import { CheckIcon, SpinnerIcon, UserIcon } from "./icons";
+import { $bestSolo, $bestVs, $busy, $error, $playerName } from "@/stores/gameStore";
+import { CheckIcon, HistoryIcon, SpinnerIcon, TrophyIcon, UserIcon } from "./icons";
 import { Logo } from "./Logo";
+import { HistoryModal } from "./HistoryModal";
 
 interface HomeProps {
   onCreate: () => void;
@@ -15,9 +16,12 @@ interface HomeProps {
 // Pantalla inicial: crear sala, unirse con codigo o jugar solo.
 export function Home({ onCreate, onJoin, onSolo }: HomeProps) {
   const [code, setCode] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
   const error = useStore($error);
   const busy = useStore($busy);
   const name = useStore($playerName);
+  const bestSolo = useStore($bestSolo);
+  const bestVs = useStore($bestVs);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -112,6 +116,37 @@ export function Home({ onCreate, onJoin, onSolo }: HomeProps) {
         </form>
       </div>
 
+      {/* Mejores puntuaciones */}
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="rounded-2xl bg-white border border-[#eee6d8] px-4 py-3 text-center">
+          <p className="text-xs uppercase tracking-widest text-[var(--color-texto-2)] inline-flex items-center gap-1">
+            <TrophyIcon className="w-3.5 h-3.5 text-[var(--color-acento)]" />
+            Mejor solo
+          </p>
+          <p className="text-2xl font-extrabold text-[var(--color-acento)]">
+            {bestSolo}
+          </p>
+        </div>
+        <div className="rounded-2xl bg-white border border-[#eee6d8] px-4 py-3 text-center">
+          <p className="text-xs uppercase tracking-widest text-[var(--color-texto-2)] inline-flex items-center gap-1">
+            <TrophyIcon className="w-3.5 h-3.5 text-[var(--color-acento-2)]" />
+            Mejor VS
+          </p>
+          <p className="text-2xl font-extrabold text-[var(--color-acento-2)]">
+            {bestVs}
+          </p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setHistoryOpen(true)}
+        className="mt-3 w-full py-3 rounded-2xl bg-white text-[var(--color-texto)] border border-[var(--color-celda)] font-semibold inline-flex items-center justify-center gap-2 transition-transform hover:scale-[1.01] active:scale-[0.99]"
+      >
+        <HistoryIcon className="w-5 h-5 text-[var(--color-acento)]" />
+        Historial de partidas
+      </button>
+
       <ul className="mt-8 space-y-2 text-sm text-[var(--color-texto-2)]">
         {[
           "Mismo tablero y mismas fichas para ambos",
@@ -124,6 +159,8 @@ export function Home({ onCreate, onJoin, onSolo }: HomeProps) {
           </li>
         ))}
       </ul>
+
+      <HistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} />
     </div>
   );
 }

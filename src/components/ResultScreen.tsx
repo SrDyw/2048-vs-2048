@@ -5,13 +5,14 @@ import { useStore } from "@nanostores/react";
 import {
   $busy,
   $myTiles,
+  $newRecord,
   $opponentTiles,
   $rematchPending,
   $rematchRejected,
   $rematchRequested,
 } from "@/stores/gameStore";
 import { cn } from "@/lib/cn";
-import { CrownIcon, ExitIcon, RefreshIcon, SpinnerIcon } from "./icons";
+import { CrownIcon, ExitIcon, RefreshIcon, SpinnerIcon, TrophyIcon } from "./icons";
 import { Board } from "./Board";
 
 interface ResultScreenProps {
@@ -38,6 +39,7 @@ export function ResultScreen({
   const busy = useStore($busy);
   const myTiles = useStore($myTiles);
   const opponentTiles = useStore($opponentTiles);
+  const newRecord = useStore($newRecord);
 
   const draw = myScore === opponentScore;
   const iWon = myScore > opponentScore;
@@ -89,6 +91,13 @@ export function ResultScreen({
         >
           {title}
         </h2>
+
+        {newRecord && (
+          <p className="mx-auto mb-4 w-fit inline-flex items-center gap-1.5 rounded-full bg-[var(--color-tile-2048)]/25 px-3 py-1 text-sm font-semibold text-[var(--color-texto)]">
+            <TrophyIcon className="w-4 h-4 text-[var(--color-tile-2048)]" />
+            ¡Nuevo record!
+          </p>
+        )}
 
         <div className="grid grid-cols-2 gap-4 mb-6">
           <ScoreCard

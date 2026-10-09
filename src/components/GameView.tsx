@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "@nanostores/react";
-import { GameEngine, type Direction, type GameSnapshot } from "@/lib/game2048";
+import { GameEngine, type Direction, type GameSnapshot, type SavedGame } from "@/lib/game2048";
 import { MERGE_MS, prefersReducedMotion, slideDuration } from "@/lib/animations";
+import { clearSoloGame, saveSoloGame } from "@/lib/soloSave";
 import {
   $myOver,
   $myScore,
@@ -21,6 +22,8 @@ interface GameViewProps {
   onGameOver: (score: number) => void;
   // Modo un jugador: sin tablero rival ni envio de eventos.
   solo?: boolean;
+  // Partida guardada que se esta continuando (solo en modo un jugador).
+  saved?: SavedGame | null;
 }
 
 // Vista de partida: tablero propio grande + tablero del rival pequeno.
@@ -29,10 +32,11 @@ export function GameView({
   onSendMove,
   onGameOver,
   solo = false,
+  saved = null,
 }: GameViewProps) {
   const engineRef = useRef<GameEngine | null>(null);
   if (engineRef.current === null) {
-    engineRef.current = new GameEngine(seed);
+    engineRef.current = saved ? GameEngine.fromSaved(saved) : new GameEngine(seed);
   }
   const engine = engineRef.current;
 
@@ -80,6 +84,15 @@ export function GameView({
           // Guardamos el tablero final para mostrarlo en el resultado.
           $myTiles.set(result.finalTiles);
           onGameOver(engine.score);
+        }
+
+        // En modo un jugador, guardamos el estado para poder continuar luego.
+        if (solo) {
+          if (engine.gameOver) {
+            clearSoloGame();
+          } else {
+            saveSoloGame(engine.serialize());
+          }
         }
 
         const unlock = reduce ? 0 : MERGE_MS;
@@ -134,6 +147,16 @@ export function GameView({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [doMove]);
+
+  // En modo un jugador, guarda el estado actual al montar (por si se sale).
+  useEffect(() => {
+    $myScore.set(engine.score);
+    if (solo && !engine.gameOver) {
+      saveSoloGame(engine.serialize());
+    }
+    // Solo al montar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Gestos swipe. Se detecta el desplazamiento en touchmove para responder
   // en cuanto se supera el umbral, y tambien se comprueba en touchend.

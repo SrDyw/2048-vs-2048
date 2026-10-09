@@ -147,3 +147,14 @@ export function HomeIcon(props: IconProps) {
     </svg>
   );
 }
+
+// Reloj con flecha (historial).
+export function HistoryIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6" />
+      <path d="M3.5 4v4h4" />
+      <path d="M12 8v4l3 2" />
+    </svg>
+  );
+}

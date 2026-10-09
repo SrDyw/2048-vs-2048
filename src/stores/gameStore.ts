@@ -1,5 +1,13 @@
 import { atom } from "nanostores";
-import type { Tile } from "@/lib/game2048";
+import type { SavedGame, Tile } from "@/lib/game2048";
+import {
+  appendHistory,
+  bestOf,
+  loadHistory,
+  saveHistory,
+  type HistoryEntry,
+  type GameMode,
+} from "@/lib/history";
 
 // Fases de la aplicacion.
 export type Phase =
@@ -55,9 +63,50 @@ export const $error = atom<string>("");
 
 // Modo un jugador (sin rival ni Pusher).
 export const $solo = atom<boolean>(false);
+// Partida guardada que se va a continuar (si la hay).
+export const $soloSaved = atom<SavedGame | null>(null);
+// Identificador de ronda en solitario, para remontar el tablero.
+export const $soloRound = atom<number>(0);
 
 // Nombre del jugador (se puede cambiar antes de crear/unirse).
 export const $playerName = atom<string>("");
+
+// Historial de partidas y mejores puntuaciones.
+export const $history = atom<HistoryEntry[]>([]);
+export const $bestSolo = atom<number>(0);
+export const $bestVs = atom<number>(0);
+export const $newRecord = atom<boolean>(false);
+
+// Carga el historial desde localStorage (llamar en el cliente).
+export function initHistory(): void {
+  const entries = loadHistory();
+  $history.set(entries);
+  $bestSolo.set(bestOf(entries, "solo"));
+  $bestVs.set(bestOf(entries, "vs"));
+}
+
+// Registra una partida terminada. Devuelve true si es un nuevo record.
+export function recordMatch(entry: {
+  mode: GameMode;
+  score: number;
+  opponentScore?: number;
+  result: HistoryEntry["result"];
+}): boolean {
+  const entries = appendHistory($history.get(), entry);
+  $history.set(entries);
+  saveHistory(entries);
+
+  const prevBest = entry.mode === "solo" ? $bestSolo.get() : $bestVs.get();
+  const isRecord = entry.score > prevBest;
+  $newRecord.set(isRecord);
+
+  if (entry.mode === "solo") {
+    $bestSolo.set(Math.max(prevBest, entry.score));
+  } else {
+    $bestVs.set(Math.max(prevBest, entry.score));
+  }
+  return isRecord;
+}
 
 // Reinicia el estado de la partida conservando la sala.
 export function resetMatchState(): void {
@@ -88,4 +137,5 @@ export function resetAll(): void {
   $opponentLeft.set(false);
   $error.set("");
   $solo.set(false);
+  $soloSaved.set(null);
 }

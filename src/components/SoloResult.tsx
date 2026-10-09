@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useStore } from "@nanostores/react";
-import { $myTiles } from "@/stores/gameStore";
+import { $myTiles, $newRecord } from "@/stores/gameStore";
 import { ExitIcon, RefreshIcon, TrophyIcon } from "./icons";
 import { Board } from "./Board";
 
@@ -15,6 +15,7 @@ interface SoloResultProps {
 // Resultado del modo un jugador.
 export function SoloResult({ score, onReplay, onExit }: SoloResultProps) {
   const myTiles = useStore($myTiles);
+  const newRecord = useStore($newRecord);
 
   // Un pequeno estallido de confeti al terminar.
   useEffect(() => {
@@ -42,6 +43,13 @@ export function SoloResult({ score, onReplay, onExit }: SoloResultProps) {
         <h2 className="text-2xl font-bold text-[var(--color-texto)]">
           Partida terminada
         </h2>
+
+        {newRecord && (
+          <p className="mx-auto mt-3 w-fit inline-flex items-center gap-1.5 rounded-full bg-[var(--color-tile-2048)]/25 px-3 py-1 text-sm font-semibold text-[var(--color-texto)]">
+            <TrophyIcon className="w-4 h-4 text-[var(--color-tile-2048)]" />
+            ¡Nuevo record!
+          </p>
+        )}
         <p className="mt-4 text-xs uppercase tracking-widest text-[var(--color-texto-2)]">
           Tu puntuacion
         </p>
