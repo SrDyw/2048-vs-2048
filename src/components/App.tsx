@@ -228,11 +228,7 @@ export function App() {
   };
 
   return (
-    <main
-      className={`min-h-screen w-full px-4 py-8 sm:py-12 flex justify-center ${
-        solo ? "items-center" : "items-start sm:items-center"
-      }`}
-    >
+    <main className="min-h-screen w-full px-4 py-8 sm:py-12 flex items-center justify-center">
       {/* Barra superior: inicio y compartir (disponible siempre) */}
       {phase !== "home" && (
         <div className="fixed top-4 left-4 z-[60] flex gap-2">
