@@ -22,16 +22,29 @@ export async function triggerEvent(
 }
 
 // Consulta cuantos suscriptores tiene un canal (para validar salas).
-// Devuelve 0 si el canal no existe todavia.
+// Pusher devuelve un objeto Response (fetch), y el JSON debe leerse con .json().
+// Para canales de presencia hay que pedir explicitamente "subscription_count".
+// Devuelve 0 si el canal no existe o no esta ocupado.
 export async function getChannelSubscriptionCount(
   channel: string
 ): Promise<number> {
   try {
     const response = await pusherServer.get({
       path: `/channels/${channel}`,
+      params: { info: "subscription_count" },
     });
-    const body = response.body as { subscription_count?: number };
-    return body.subscription_count ?? 0;
+
+    if (!response.ok) return 0;
+
+    const body = (await response.json()) as {
+      occupied?: boolean;
+      subscription_count?: number;
+    };
+
+    if (!body.occupied) return 0;
+    return typeof body.subscription_count === "number"
+      ? body.subscription_count
+      : 1;
   } catch {
     // Pusher devuelve error si el canal no existe.
     return 0;
