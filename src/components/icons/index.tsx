@@ -136,3 +136,14 @@ export function SpinnerIcon(props: IconProps) {
     </svg>
   );
 }
+
+// Casa (salir al inicio).
+export function HomeIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3 10.5L12 3l9 7.5" />
+      <path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5" />
+      <path d="M10 21v-6h4v6" />
+    </svg>
+  );
+}

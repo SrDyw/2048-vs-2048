@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "@nanostores/react";
 import { useGame } from "@/hooks/useGame";
 import { randomSeed } from "@/lib/prng";
@@ -25,7 +25,8 @@ import { Countdown } from "./Countdown";
 import { GameView } from "./GameView";
 import { ResultScreen } from "./ResultScreen";
 import { SoloResult } from "./SoloResult";
-import { ExitIcon } from "./icons";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { ExitIcon, HomeIcon } from "./icons";
 
 // Componente raiz: gestiona la maquina de estados de la aplicacion.
 export function App() {
@@ -40,6 +41,7 @@ export function App() {
   const opponentLeft = useStore($opponentLeft);
   const roomCode = useStore($roomCode);
   const solo = useStore($solo);
+  const [showLeave, setShowLeave] = useState(false);
 
   // Recupera y guarda el nombre del jugador en localStorage.
   useEffect(() => {
@@ -68,6 +70,16 @@ export function App() {
 
   const exitSolo = () => {
     resetAll();
+  };
+
+  // Salir de la partida actual (individual o en sala) con confirmacion.
+  const confirmLeave = () => {
+    setShowLeave(false);
+    if (solo) {
+      exitSolo();
+    } else {
+      game.leaveToHome();
+    }
   };
 
   // Pasa a "esperando" cuando yo he terminado pero el rival sigue jugando.
@@ -101,6 +113,19 @@ export function App() {
 
   return (
     <main className="min-h-screen w-full px-4 py-8 sm:py-12 flex items-start sm:items-center justify-center">
+      {/* Boton de inicio (salir de la sala o del modo solo) */}
+      {phase !== "home" && (
+        <button
+          type="button"
+          onClick={() => setShowLeave(true)}
+          aria-label="Salir al inicio"
+          title="Salir al inicio"
+          className="fixed top-4 left-4 z-[60] flex items-center justify-center w-11 h-11 rounded-2xl bg-white border border-[#eee6d8] text-[var(--color-texto)] shadow-[var(--shadow-suave)] transition-transform hover:scale-105 active:scale-95"
+        >
+          <HomeIcon className="w-5 h-5" />
+        </button>
+      )}
+
       {phase === "home" && (
         <Home
           onCreate={game.createRoom}
@@ -192,6 +217,21 @@ export function App() {
           </div>
         </div>
       )}
+
+      {/* Confirmacion para salir */}
+      <ConfirmDialog
+        open={showLeave}
+        title="¿Salir al inicio?"
+        message={
+          solo
+            ? "Se perdera el progreso de la partida."
+            : "Si sales, la sala se cerrara para ambos jugadores."
+        }
+        confirmLabel="Salir"
+        cancelLabel="Seguir jugando"
+        onConfirm={confirmLeave}
+        onCancel={() => setShowLeave(false)}
+      />
     </main>
   );
 }
