@@ -156,7 +156,7 @@ export function ResultScreen({
           className="w-full mb-6 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[var(--color-exito)] text-white font-semibold shadow-[var(--shadow-suave)] transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {sharing ? <SpinnerIcon className="w-5 h-5" /> : <ShareIcon className="w-5 h-5" />}
-          Compartir en WhatsApp
+          Compartir
         </button>
 
         {rematchRejected ? (

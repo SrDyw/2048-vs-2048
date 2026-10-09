@@ -183,7 +183,11 @@ export function App() {
     !solo && opponentLeft && roomCode !== "" && phase !== "home";
 
   return (
-    <main className="min-h-screen w-full px-4 py-8 sm:py-12 flex items-start sm:items-center justify-center">
+    <main
+      className={`min-h-screen w-full px-4 py-8 sm:py-12 flex justify-center ${
+        solo ? "items-center" : "items-start sm:items-center"
+      }`}
+    >
       {/* Boton de inicio (salir de la sala o del modo solo) */}
       {phase !== "home" && (
         <button
