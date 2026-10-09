@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "@nanostores/react";
 import { $myTiles, $newRecord } from "@/stores/gameStore";
-import { ExitIcon, RefreshIcon, TrophyIcon } from "./icons";
+import { shareResult } from "@/lib/share";
+import { ExitIcon, RefreshIcon, ShareIcon, SpinnerIcon, TrophyIcon } from "./icons";
 import { Board } from "./Board";
 
 interface SoloResultProps {
@@ -16,6 +17,23 @@ interface SoloResultProps {
 export function SoloResult({ score, onReplay, onExit }: SoloResultProps) {
   const myTiles = useStore($myTiles);
   const newRecord = useStore($newRecord);
+  const [sharing, setSharing] = useState(false);
+
+  const handleShare = async () => {
+    setSharing(true);
+    try {
+      await shareResult({
+        headline: "Partida terminada",
+        myScore: score,
+        myTiles,
+        solo: true,
+      });
+    } catch {
+      // Si falla, no interrumpimos el resultado.
+    } finally {
+      setSharing(false);
+    }
+  };
 
   // Un pequeno estallido de confeti al terminar.
   useEffect(() => {
@@ -63,6 +81,15 @@ export function SoloResult({ score, onReplay, onExit }: SoloResultProps) {
         </div>
 
         <div className="mt-7 space-y-3">
+          <button
+            type="button"
+            onClick={handleShare}
+            disabled={sharing}
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[var(--color-exito)] text-white font-semibold shadow-[var(--shadow-suave)] transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {sharing ? <SpinnerIcon className="w-5 h-5" /> : <ShareIcon className="w-5 h-5" />}
+            Compartir en WhatsApp
+          </button>
           <button
             type="button"
             onClick={onReplay}

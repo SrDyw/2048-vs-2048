@@ -15,6 +15,7 @@ import {
 } from "@/stores/gameStore";
 import { cn } from "@/lib/cn";
 import { Board } from "./Board";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 interface GameViewProps {
   seed: number;
@@ -43,9 +44,12 @@ export function GameView({
   const [tiles, setTiles] = useState(() => engine.getTiles());
   const [score, setScore] = useState(engine.score);
   const [over, setOver] = useState(false);
+  const [showForceEnd, setShowForceEnd] = useState(false);
 
   const lockedRef = useRef(false);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  // Ref sincronizada con el modal de finalizar para bloquear movimientos.
+  const forceEndRef = useRef(false);
 
   const opponentTiles = useStore($opponentTiles);
   const opponentScore = useStore($opponentScore);
@@ -57,7 +61,7 @@ export function GameView({
 
   const doMove = useCallback(
     (direction: Direction) => {
-      if (lockedRef.current || spectator) return;
+      if (lockedRef.current || spectator || forceEndRef.current) return;
 
       const result = engine.move(direction);
       if (!result.moved) return;
@@ -104,11 +108,39 @@ export function GameView({
     [engine, onSendMove, onGameOver, spectator, solo]
   );
 
+  // Finaliza la partida forzadamente (tecla Escape). Aplica el mismo resultado
+  // que una derrota normal: congela el tablero, envia el game over y muestra
+  // la pantalla correspondiente.
+  const forceGameOver = useCallback(() => {
+    if (over || myOverStore) return;
+    forceEndRef.current = false;
+    setShowForceEnd(false);
+    setOver(true);
+    $myOver.set(true);
+    $myTiles.set(engine.getTiles());
+    onGameOver(engine.score);
+    if (solo) {
+      clearSoloGame();
+    }
+  }, [engine, onGameOver, over, myOverStore, solo]);
+
   // Controles de teclado.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+        return;
+      }
+
+      // Escape: abre/cierra el modal para finalizar la partida.
+      if (event.key === "Escape") {
+        if (forceEndRef.current) {
+          forceEndRef.current = false;
+          setShowForceEnd(false);
+        } else if (!spectator) {
+          forceEndRef.current = true;
+          setShowForceEnd(true);
+        }
         return;
       }
 
@@ -146,7 +178,7 @@ export function GameView({
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [doMove]);
+  }, [doMove, spectator]);
 
   // En modo un jugador, guarda el estado actual al montar (por si se sale).
   useEffect(() => {
@@ -285,6 +317,20 @@ export function GameView({
           </aside>
         )}
       </div>
+
+      {/* Modal para finalizar la partida con Escape */}
+      <ConfirmDialog
+        open={showForceEnd}
+        title="¿Finalizar la partida?"
+        message="Se dara por terminada ahora mismo y se mostrara el resultado."
+        confirmLabel="Finalizar"
+        cancelLabel="Seguir jugando"
+        onConfirm={forceGameOver}
+        onCancel={() => {
+          forceEndRef.current = false;
+          setShowForceEnd(false);
+        }}
+      />
     </div>
   );
 }
