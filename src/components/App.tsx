@@ -5,17 +5,20 @@ import { useStore } from "@nanostores/react";
 import { useGame } from "@/hooks/useGame";
 import { randomSeed } from "@/lib/prng";
 import { clearSoloGame, hasSoloSave, loadSoloGame } from "@/lib/soloSave";
+import { shareResult } from "@/lib/share";
 import {
   $countdownFrom,
   $myOver,
   $myScore,
-  $opponentLeft,
+  $myTiles,
   $opponentOver,
   $opponentScore,
+  $opponentTiles,
   $phase,
   $playerName,
-  $roomCode,
+  $reconnecting,
   $seed,
+  $sessionStart,
   $solo,
   $soloRound,
   $soloSaved,
@@ -33,7 +36,7 @@ import { ResultScreen } from "./ResultScreen";
 import { SoloResult } from "./SoloResult";
 import { SoloStartDialog } from "./SoloStartDialog";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { ExitIcon, HomeIcon } from "./icons";
+import { HomeIcon, ShareIcon, SpinnerIcon } from "./icons";
 
 // Componente raiz: gestiona la maquina de estados de la aplicacion.
 export function App() {
@@ -45,13 +48,15 @@ export function App() {
   const myOver = useStore($myOver);
   const opponentOver = useStore($opponentOver);
   const countdownFrom = useStore($countdownFrom);
-  const opponentLeft = useStore($opponentLeft);
-  const roomCode = useStore($roomCode);
+  const reconnecting = useStore($reconnecting);
   const solo = useStore($solo);
   const soloRound = useStore($soloRound);
   const soloSaved = useStore($soloSaved);
+  const myTiles = useStore($myTiles);
+  const opponentTiles = useStore($opponentTiles);
   const [showLeave, setShowLeave] = useState(false);
   const [showSoloMenu, setShowSoloMenu] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const matchRecordedRef = useRef(false);
 
   // Carga el historial guardado en localStorage.
@@ -150,6 +155,13 @@ export function App() {
     }
   }, [solo, myOver, opponentOver, phase]);
 
+  // Marca el inicio de la partida al entrar en "playing".
+  useEffect(() => {
+    if (phase === "playing" && $sessionStart.get() === 0) {
+      $sessionStart.set(Date.now());
+    }
+  }, [phase]);
+
   // Registra en el historial la partida terminada (una vez por partida).
   useEffect(() => {
     if (phase === "playing" || phase === "countdown" || phase === "lobby") {
@@ -159,9 +171,12 @@ export function App() {
     }
     if (matchRecordedRef.current) return;
 
+    const start = $sessionStart.get();
+    const durationMs = start ? Date.now() - start : undefined;
+
     if (phase === "solo-result") {
       matchRecordedRef.current = true;
-      recordMatch({ mode: "solo", score: myScore, result: "solo" });
+      recordMatch({ mode: "solo", score: myScore, result: "solo", durationMs });
     } else if (phase === "result") {
       matchRecordedRef.current = true;
       const result =
@@ -175,12 +190,42 @@ export function App() {
         score: myScore,
         opponentScore,
         result,
+        durationMs,
       });
     }
   }, [phase, myScore, opponentScore]);
 
-  const showDisconnectOverlay =
-    !solo && opponentLeft && roomCode !== "" && phase !== "home";
+  // Comparte el estado actual (disponible en cualquier momento de la partida).
+  const handleShare = async () => {
+    setSharing(true);
+    try {
+      let headline: string;
+      if (solo) {
+        headline = myOver ? "Partida terminada" : "Partida en curso";
+      } else if (phase === "result") {
+        headline =
+          myScore > opponentScore
+            ? "¡Ganaste!"
+            : myScore < opponentScore
+              ? "Perdiste"
+              : "Empate";
+      } else {
+        headline = "Partida en curso";
+      }
+      await shareResult({
+        headline,
+        myScore,
+        opponentScore,
+        myTiles,
+        opponentTiles,
+        solo,
+      });
+    } catch {
+      // Si falla, no interrumpimos.
+    } finally {
+      setSharing(false);
+    }
+  };
 
   return (
     <main
@@ -188,17 +233,41 @@ export function App() {
         solo ? "items-center" : "items-start sm:items-center"
       }`}
     >
-      {/* Boton de inicio (salir de la sala o del modo solo) */}
+      {/* Barra superior: inicio y compartir (disponible siempre) */}
       {phase !== "home" && (
-        <button
-          type="button"
-          onClick={() => setShowLeave(true)}
-          aria-label="Salir al inicio"
-          title="Salir al inicio"
-          className="fixed top-4 left-4 z-[60] flex items-center justify-center w-11 h-11 rounded-2xl bg-white border border-[#eee6d8] text-[var(--color-texto)] shadow-[var(--shadow-suave)] transition-transform hover:scale-105 active:scale-95"
-        >
-          <HomeIcon className="w-5 h-5" />
-        </button>
+        <div className="fixed top-4 left-4 z-[60] flex gap-2">
+          <button
+            type="button"
+            onClick={() => setShowLeave(true)}
+            aria-label="Salir al inicio"
+            title="Salir al inicio"
+            className="flex items-center justify-center w-11 h-11 rounded-2xl bg-white border border-[#eee6d8] text-[var(--color-texto)] shadow-[var(--shadow-suave)] transition-transform hover:scale-105 active:scale-95"
+          >
+            <HomeIcon className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            onClick={handleShare}
+            disabled={sharing}
+            aria-label="Compartir"
+            title="Compartir"
+            className="flex items-center justify-center w-11 h-11 rounded-2xl bg-white border border-[#eee6d8] text-[var(--color-texto)] shadow-[var(--shadow-suave)] transition-transform hover:scale-105 active:scale-95 disabled:opacity-60"
+          >
+            {sharing ? (
+              <SpinnerIcon className="w-5 h-5" />
+            ) : (
+              <ShareIcon className="w-5 h-5" />
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Aviso de reconexion propia */}
+      {reconnecting && phase !== "home" && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 rounded-full bg-[var(--color-acento)] text-white px-4 py-2 text-sm font-semibold shadow-[var(--shadow-suave)]">
+          <SpinnerIcon className="w-4 h-4" />
+          Reconectando...
+        </div>
       )}
 
       {phase === "home" && (
@@ -261,37 +330,6 @@ export function App() {
           onRejectRematch={game.rejectRematch}
           onLeave={game.leaveToHome}
         />
-      )}
-
-      {/* Aviso de rival desconectado */}
-      {showDisconnectOverlay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-crema)]/85 backdrop-blur-sm px-4">
-          <div className="w-full max-w-sm rounded-3xl bg-white shadow-[var(--shadow-suave)] p-6 text-center border border-white">
-            <p className="text-lg font-semibold text-[var(--color-texto)]">
-              Rival desconectado
-            </p>
-            <p className="mt-2 text-sm text-[var(--color-texto-2)]">
-              Puedes esperar a que vuelva o salir al inicio.
-            </p>
-            <div className="mt-5 flex gap-3">
-              <button
-                type="button"
-                onClick={() => $opponentLeft.set(false)}
-                className="flex-1 py-3 rounded-2xl bg-[var(--color-acento)] text-white font-semibold"
-              >
-                Esperar
-              </button>
-              <button
-                type="button"
-                onClick={game.leaveToHome}
-                className="flex-1 inline-flex items-center justify-center gap-2 py-3 rounded-2xl bg-white text-[var(--color-texto)] border border-[var(--color-celda)] font-semibold"
-              >
-                <ExitIcon className="w-4 h-4" />
-                Salir
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Confirmacion para salir */}

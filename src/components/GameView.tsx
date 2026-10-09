@@ -11,11 +11,14 @@ import {
   $myTiles,
   $opponentOver,
   $opponentScore,
+  $opponentStatus,
   $opponentTiles,
+  $sessionStart,
 } from "@/stores/gameStore";
 import { cn } from "@/lib/cn";
 import { Board } from "./Board";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { ClockIcon, FlagIcon } from "./icons";
 
 interface GameViewProps {
   seed: number;
@@ -27,9 +30,15 @@ interface GameViewProps {
   saved?: SavedGame | null;
 }
 
+// Formatea segundos como m:ss.
+function formatTime(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
 // Vista de partida: tablero propio grande + tablero del rival pequeno.
-export function GameView({
-  seed,
+export function GameView({  seed,
   onSendMove,
   onGameOver,
   solo = false,
@@ -54,7 +63,10 @@ export function GameView({
   const opponentTiles = useStore($opponentTiles);
   const opponentScore = useStore($opponentScore);
   const opponentOver = useStore($opponentOver);
+  const opponentStatus = useStore($opponentStatus);
   const myOverStore = useStore($myOver);
+  const sessionStart = useStore($sessionStart);
+  const [elapsed, setElapsed] = useState(0);
 
   // En solo nunca se muestra el modo espectador.
   const spectator = solo ? false : over || myOverStore;
@@ -78,6 +90,8 @@ export function GameView({
         setTiles(result.finalTiles);
         setScore(engine.score);
         $myScore.set(engine.score);
+        // Mantiene el tablero actual disponible (para compartir en cualquier momento).
+        $myTiles.set(result.finalTiles);
         if (!solo) {
           onSendMove({ tiles: result.finalTiles, score: engine.score });
         }
@@ -180,9 +194,21 @@ export function GameView({
     return () => window.removeEventListener("keydown", onKey);
   }, [doMove, spectator]);
 
+  // Cronometro de la sesion (tiempo transcurrido).
+  useEffect(() => {
+    const update = () =>
+      setElapsed(
+        sessionStart ? Math.floor((Date.now() - sessionStart) / 1000) : 0
+      );
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [sessionStart]);
+
   // En modo un jugador, guarda el estado actual al montar (por si se sale).
   useEffect(() => {
     $myScore.set(engine.score);
+    $myTiles.set(engine.getTiles());
     if (solo && !engine.gameOver) {
       saveSoloGame(engine.serialize());
     }
@@ -253,6 +279,27 @@ export function GameView({
         </div>
       )}
 
+      {/* Cronometro de sesion y boton de finalizar */}
+      <div className="mb-4 flex items-center justify-center gap-3">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#eee6d8] px-3 py-1.5 text-sm font-semibold text-[var(--color-texto-2)] tabular-nums">
+          <ClockIcon className="w-4 h-4" />
+          {formatTime(elapsed)}
+        </span>
+        {!spectator && (
+          <button
+            type="button"
+            onClick={() => {
+              forceEndRef.current = true;
+              setShowForceEnd(true);
+            }}
+            className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#eee6d8] px-3 py-1.5 text-sm font-semibold text-[var(--color-texto)] transition-transform hover:scale-105 active:scale-95"
+          >
+            <FlagIcon className="w-4 h-4" />
+            Finalizar
+          </button>
+        )}
+      </div>
+
       <div className="flex flex-col lg:flex-row gap-5 items-center lg:items-start justify-center">
         {/* Zona principal */}
         <div className="w-full max-w-md flex-1">
@@ -271,7 +318,11 @@ export function GameView({
               </div>
               <Board tiles={opponentTiles} />
               <p className="text-center text-sm text-[var(--color-texto-2)] mt-3">
-                Tablero del rival
+                {opponentStatus === "reconnecting"
+                  ? "Rival reconectando..."
+                  : opponentStatus === "left"
+                    ? "El rival se desconecto"
+                    : "Tablero del rival"}
               </p>
             </div>
           ) : (
@@ -309,7 +360,17 @@ export function GameView({
               </p>
             </div>
             <Board tiles={opponentTiles} compact />
-            {opponentOver && (
+            {opponentStatus === "reconnecting" && (
+              <p className="text-center text-xs text-[var(--color-acento)] mt-2">
+                Rival reconectando...
+              </p>
+            )}
+            {opponentStatus === "left" && (
+              <p className="text-center text-xs text-[var(--color-error)] mt-2">
+                El rival se desconecto
+              </p>
+            )}
+            {opponentOver && opponentStatus === "online" && (
               <p className="text-center text-xs text-[var(--color-error)] mt-2">
                 El rival ha terminado
               </p>

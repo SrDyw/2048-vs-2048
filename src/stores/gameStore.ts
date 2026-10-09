@@ -37,8 +37,16 @@ export const $myId = atom<string>("");
 export const $isHost = atom<boolean>(false);
 export const $players = atom<PlayerInfo[]>([]);
 export const $connected = atom<boolean>(false);
+// Indica que nuestra propia conexion se esta restableciendo.
+export const $reconnecting = atom<boolean>(false);
+// Estado del rival respecto a la conexion.
+export const $opponentStatus = atom<"online" | "reconnecting" | "left">(
+  "online"
+);
 export const $seed = atom<number | null>(null);
 export const $countdownFrom = atom<number>(3);
+// Momento (ms) en que empezo la partida en curso, para medir su duracion.
+export const $sessionStart = atom<number>(0);
 
 // Tableros y puntuaciones.
 export const $myScore = atom<number>(0);
@@ -53,7 +61,6 @@ export const $result = atom<MatchResult | null>(null);
 export const $rematchRequested = atom<boolean>(false);
 export const $rematchRejected = atom<boolean>(false);
 export const $rematchPending = atom<boolean>(false);
-export const $opponentLeft = atom<boolean>(false);
 
 // Indica que hay una accion en curso (para mostrar spinners en los botones).
 export const $busy = atom<boolean>(false);
@@ -91,6 +98,7 @@ export function recordMatch(entry: {
   score: number;
   opponentScore?: number;
   result: HistoryEntry["result"];
+  durationMs?: number;
 }): boolean {
   const entries = appendHistory($history.get(), entry);
   $history.set(entries);
@@ -122,6 +130,8 @@ export function resetMatchState(): void {
   $rematchPending.set(false);
   $seed.set(null);
   $countdownFrom.set(3);
+  $sessionStart.set(0);
+  $opponentStatus.set("online");
   // Vuelve a marcar a todos como no listos para la revancha.
   $players.set($players.get().map((p) => ({ ...p, ready: false })));
 }
@@ -134,7 +144,7 @@ export function resetAll(): void {
   $myId.set("");
   $isHost.set(false);
   $players.set([]);
-  $opponentLeft.set(false);
+  $opponentStatus.set("online");
   $error.set("");
   $solo.set(false);
   $soloSaved.set(null);

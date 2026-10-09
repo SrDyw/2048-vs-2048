@@ -23,6 +23,15 @@ function formatDate(timestamp: number): string {
   });
 }
 
+// Formatea una duracion en milisegundos como m:ss.
+function formatDuration(ms?: number): string {
+  if (!ms || ms <= 0) return "0:00";
+  const total = Math.floor(ms / 1000);
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
 // Modal con el historial de partidas, con pestanas Solo / VS.
 export function HistoryModal({ open, onClose }: HistoryModalProps) {
   const [tab, setTab] = useState<GameMode>("solo");
@@ -124,7 +133,7 @@ export function HistoryModal({ open, onClose }: HistoryModalProps) {
                     {entry.mode === "vs"
                       ? `${resultLabel} · Rival ${entry.opponentScore ?? 0} · `
                       : ""}
-                    {formatDate(entry.date)}
+                    {formatDate(entry.date)} · {formatDuration(entry.durationMs)}
                   </p>
                 </div>
               </div>

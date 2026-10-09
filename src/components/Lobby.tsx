@@ -6,7 +6,7 @@ import {
   $busy,
   $isHost,
   $myId,
-  $opponentLeft,
+  $opponentStatus,
   $players,
   $roomCode,
 } from "@/stores/gameStore";
@@ -77,7 +77,7 @@ export function Lobby({ onToggleReady, onStart, onLeave }: LobbyProps) {
   const players = useStore($players);
   const myId = useStore($myId);
   const isHost = useStore($isHost);
-  const opponentLeft = useStore($opponentLeft);
+  const opponentStatus = useStore($opponentStatus);
   const busy = useStore($busy);
   const [copied, setCopied] = useState(false);
 
@@ -96,7 +96,7 @@ export function Lobby({ onToggleReady, onStart, onLeave }: LobbyProps) {
     }
   };
 
-  if (opponentLeft) {
+  if (opponentStatus === "left") {
     return (
       <div className="fade-in w-full max-w-md mx-auto text-center bg-white/70 rounded-3xl shadow-[var(--shadow-suave)] p-8 border border-white">
         <p className="text-lg font-semibold text-[var(--color-texto)]">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useStore } from "@nanostores/react";
 import {
   $busy,
@@ -12,8 +12,7 @@ import {
   $rematchRequested,
 } from "@/stores/gameStore";
 import { cn } from "@/lib/cn";
-import { shareResult } from "@/lib/share";
-import { CrownIcon, ExitIcon, RefreshIcon, ShareIcon, SpinnerIcon, TrophyIcon } from "./icons";
+import { CrownIcon, ExitIcon, RefreshIcon, SpinnerIcon, TrophyIcon } from "./icons";
 import { Board } from "./Board";
 
 interface ResultScreenProps {
@@ -41,25 +40,6 @@ export function ResultScreen({
   const myTiles = useStore($myTiles);
   const opponentTiles = useStore($opponentTiles);
   const newRecord = useStore($newRecord);
-  const [sharing, setSharing] = useState(false);
-
-  const handleShare = async () => {
-    setSharing(true);
-    try {
-      await shareResult({
-        headline: title,
-        myScore,
-        opponentScore,
-        myTiles,
-        opponentTiles,
-        solo: false,
-      });
-    } catch {
-      // Si falla, no interrumpimos el resultado.
-    } finally {
-      setSharing(false);
-    }
-  };
 
   const draw = myScore === opponentScore;
   const iWon = myScore > opponentScore;
@@ -147,17 +127,6 @@ export function ResultScreen({
             <Board tiles={opponentTiles} compact />
           </div>
         </div>
-
-        {/* Compartir */}
-        <button
-          type="button"
-          onClick={handleShare}
-          disabled={sharing}
-          className="w-full mb-6 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[var(--color-exito)] text-white font-semibold shadow-[var(--shadow-suave)] transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {sharing ? <SpinnerIcon className="w-5 h-5" /> : <ShareIcon className="w-5 h-5" />}
-          Compartir
-        </button>
 
         {rematchRejected ? (
           <div className="text-center">

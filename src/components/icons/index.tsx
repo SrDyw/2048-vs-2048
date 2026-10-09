@@ -171,3 +171,23 @@ export function ShareIcon(props: IconProps) {
     </svg>
   );
 }
+
+// Bandera (finalizar la partida).
+export function FlagIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M5 21V4" />
+      <path d="M5 5h11l-2 3 2 3H5" />
+    </svg>
+  );
+}
+
+// Reloj (tiempo de partida).
+export function ClockIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </svg>
+  );
+}

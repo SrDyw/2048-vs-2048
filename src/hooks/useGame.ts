@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useStore } from "@nanostores/react";
-import { subscribeToChannel, unsubscribeFromChannel, setPusherPlayerName } from "@/lib/pusher-client";
+import {
+  getPusherClient,
+  subscribeToChannel,
+  unsubscribeFromChannel,
+  setPusherPlayerName,
+} from "@/lib/pusher-client";
 import {
   roomChannel,
   type ServerEvent,
@@ -22,11 +27,12 @@ import {
   $error,
   $isHost,
   $myId,
-  $opponentLeft,
   $opponentOver,
   $opponentScore,
+  $opponentStatus,
   $opponentTiles,
   $phase,
+  $reconnecting,
   $playerName,
   $players,
   $rematchPending,
@@ -71,6 +77,28 @@ export function useGame() {
   // Handshake de union: el que se une pregunta y el host responde.
   const joiningRef = useRef(false);
   const joinTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Tiempo de gracia antes de considerar al rival desconectado definitivamente.
+  const opponentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const OPPONENT_GRACE_MS = 30000;
+
+  // Vigila el estado de nuestra propia conexion a Pusher (reconexion).
+  useEffect(() => {
+    let pusher: ReturnType<typeof getPusherClient> | null = null;
+    try {
+      pusher = getPusherClient();
+    } catch {
+      return;
+    }
+    const onChange = (states: { current: string }) => {
+      const connected = states.current === "connected";
+      $connected.set(connected);
+      $reconnecting.set(!connected);
+    };
+    pusher.connection.bind("state_change", onChange);
+    return () => {
+      pusher?.connection.unbind("state_change", onChange);
+    };
+  }, []);
 
   // Envia un comando/evento al endpoint que dispara Pusher.
   const trigger = useCallback(
@@ -305,13 +333,22 @@ export function useGame() {
 
     channel.bind("pusher:member_added", () => {
       syncMembers();
-      $opponentLeft.set(false);
+      // El rival (re)aparece: cancelamos el tiempo de gracia.
+      if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
+      $opponentStatus.set("online");
     });
 
     channel.bind("pusher:member_removed", (data: unknown) => {
       const member = data as PresenceMember;
       if (member.id !== $myId.get()) {
-        $opponentLeft.set(true);
+        // Damos un tiempo de gracia por si solo fue una caida de conexion.
+        $opponentStatus.set("reconnecting");
+        if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
+        opponentTimerRef.current = setTimeout(() => {
+          if ($opponentStatus.get() === "reconnecting") {
+            $opponentStatus.set("left");
+          }
+        }, OPPONENT_GRACE_MS);
       }
       syncMembers();
     });
@@ -379,11 +416,17 @@ export function useGame() {
     channel.bind("player_left", (data: unknown) => {
       const payload = data as PlayerLeftPayload;
       if (payload.senderId === $myId.get()) return;
-      $opponentLeft.set(true);
+      // Salida explicita: se considera desconectado tras el tiempo de gracia.
+      $opponentStatus.set("reconnecting");
+      if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
+      opponentTimerRef.current = setTimeout(() => {
+        $opponentStatus.set("left");
+      }, OPPONENT_GRACE_MS);
     });
 
     return () => {
       if (joinTimeoutRef.current) clearTimeout(joinTimeoutRef.current);
+      if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
       joiningRef.current = false;
       channel.unbind_all?.();
       unsubscribeFromChannel(channelName);

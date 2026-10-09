@@ -10,6 +10,8 @@ export interface HistoryEntry {
   opponentScore?: number;
   result: GameResult;
   date: number;
+  // Duracion de la partida en milisegundos.
+  durationMs?: number;
 }
 
 const STORAGE_KEY = "2048_history_v1";
