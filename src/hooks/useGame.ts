@@ -67,6 +67,9 @@ export function useGame() {
   const channelRef = useRef<PresenceChannelLike | null>(null);
   // Reactivo al codigo de sala para suscribirse cuando cambie.
   const roomCode = useStore($roomCode);
+  // Handshake de union: el que se une pregunta y el host responde.
+  const joiningRef = useRef(false);
+  const joinTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Envia un comando/evento al endpoint que dispara Pusher.
   const trigger = useCallback(
@@ -110,28 +113,26 @@ export function useGame() {
       return;
     }
 
+    // Nos suscribimos al canal y preguntamos si hay alguien. El host
+    // respondera por el propio canal (mas fiable que consultar la REST API).
+    joiningRef.current = true;
     $busy.set(true);
-    try {
-      const res = await fetch("/api/room/join", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
-      });
-      const body = (await res.json()) as { ok: boolean; error?: string };
-      if (!body.ok) {
-        $error.set(body.error ?? "No se pudo unir a la sala");
-        return;
-      }
-    } catch {
-      $error.set("Error de conexion. Intenta de nuevo");
-      return;
-    } finally {
-      $busy.set(false);
-    }
-
     $isHost.set(false);
     $roomCode.set(code);
-    $phase.set("lobby");
+
+    // Si nadie responde en unos segundos, la sala no existe.
+    if (joinTimeoutRef.current) clearTimeout(joinTimeoutRef.current);
+    joinTimeoutRef.current = setTimeout(() => {
+      if (!joiningRef.current) return;
+      joiningRef.current = false;
+      $busy.set(false);
+      $error.set(
+        $connected.get()
+          ? "La sala no existe"
+          : "No se pudo conectar al servicio en tiempo real"
+      );
+      $roomCode.set("");
+    }, 4500);
   }, []);
 
   const toggleReady = useCallback(async () => {
@@ -219,7 +220,17 @@ export function useGame() {
     if (!roomCode) return;
 
     const channelName = roomChannel(roomCode);
-    const channel = subscribeToChannel(channelName) as unknown as PresenceChannelLike;
+    let channel: PresenceChannelLike;
+    try {
+      channel = subscribeToChannel(channelName) as unknown as PresenceChannelLike;
+    } catch {
+      // Suele ocurrir si falta la clave publica de Pusher.
+      joiningRef.current = false;
+      $busy.set(false);
+      $error.set("No se pudo conectar al servicio en tiempo real");
+      $roomCode.set("");
+      return;
+    }
     channelRef.current = channel;
 
     const syncMembers = () => {
@@ -236,9 +247,57 @@ export function useGame() {
     };
 
     channel.bind("pusher:subscription_succeeded", () => {
-      $myId.set(channel.members.myID ?? "");
+      const myId = channel.members.myID ?? "";
+      $myId.set(myId);
       $connected.set(true);
       syncMembers();
+
+      // Si estamos intentando entrar, preguntamos si hay alguien.
+      if (joiningRef.current) {
+        trigger("room_probe", { senderId: myId });
+      }
+    });
+
+    // El host responde a las peticiones de union.
+    channel.bind("room_probe", (data: unknown) => {
+      const payload = data as RematchPayload;
+      if (payload.senderId === $myId.get()) return;
+      if (!$isHost.get()) return;
+      if ($phase.get() !== "lobby") return;
+
+      let members = 0;
+      channel.members.each(() => {
+        members++;
+      });
+
+      if (members > 2) {
+        trigger("room_full", { senderId: $myId.get() });
+      } else {
+        trigger("room_here", { senderId: $myId.get() });
+      }
+    });
+
+    // Respuesta afirmativa: entramos al lobby.
+    channel.bind("room_here", (data: unknown) => {
+      const payload = data as RematchPayload;
+      if (payload.senderId === $myId.get()) return;
+      if (!joiningRef.current) return;
+      joiningRef.current = false;
+      if (joinTimeoutRef.current) clearTimeout(joinTimeoutRef.current);
+      $busy.set(false);
+      $phase.set("lobby");
+    });
+
+    // Sala llena.
+    channel.bind("room_full", (data: unknown) => {
+      const payload = data as RematchPayload;
+      if (payload.senderId === $myId.get()) return;
+      if (!joiningRef.current) return;
+      joiningRef.current = false;
+      if (joinTimeoutRef.current) clearTimeout(joinTimeoutRef.current);
+      $busy.set(false);
+      $error.set("La sala esta llena");
+      $roomCode.set("");
     });
 
     channel.bind("pusher:member_added", () => {
@@ -321,6 +380,8 @@ export function useGame() {
     });
 
     return () => {
+      if (joinTimeoutRef.current) clearTimeout(joinTimeoutRef.current);
+      joiningRef.current = false;
       channel.unbind_all?.();
       unsubscribeFromChannel(channelName);
       channelRef.current = null;

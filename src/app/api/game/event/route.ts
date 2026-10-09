@@ -5,6 +5,9 @@ import { randomSeed } from "@/lib/prng";
 
 // Eventos que los clientes pueden disparar sobre un canal.
 const ALLOWED_EVENTS: ServerEvent[] = [
+  "room_probe",
+  "room_here",
+  "room_full",
   "ready_update",
   "countdown_start",
   "opponent_board",

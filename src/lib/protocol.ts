@@ -10,6 +10,9 @@ export function roomChannel(code: string): string {
 
 // Nombre de los eventos emitidos por el servidor en el canal.
 export type ServerEvent =
+  | "room_probe"
+  | "room_here"
+  | "room_full"
   | "ready_update"
   | "countdown_start"
   | "game_start"
