@@ -236,10 +236,12 @@ export function useGame() {
     $rematchRejected.set(true);
   }, [trigger]);
 
-  const leaveToHome = useCallback(async () => {
+  const leaveToHome = useCallback(() => {
     const code = $roomCode.get();
+    const myId = $myId.get();
     if (code) {
-      await trigger("player_left", { senderId: $myId.get() });
+      // Avisa al rival sin bloquear la salida (aunque la red falle).
+      trigger("player_left", { senderId: myId }).catch(() => {});
       unsubscribeFromChannel(roomChannel(code));
     }
     channelRef.current = null;

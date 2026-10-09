@@ -24,6 +24,7 @@ export function Home({ onCreate, onJoin, onSolo }: HomeProps) {
   const name = useStore($playerName);
   const bestSolo = useStore($bestSolo);
   const bestVs = useStore($bestVs);
+  const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "1.0.0";
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -156,6 +157,10 @@ export function Home({ onCreate, onJoin, onSolo }: HomeProps) {
       </div>
 
       <HistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} />
+
+      <p className="mt-6 text-center text-[10px] uppercase tracking-[0.25em] text-[var(--color-texto-2)]/70">
+        v{version} · NO BUILD
+      </p>
     </div>
   );
 }
