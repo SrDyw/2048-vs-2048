@@ -7,6 +7,7 @@ import { MERGE_MS, prefersReducedMotion, slideDuration } from "@/lib/animations"
 import {
   $myOver,
   $myScore,
+  $myTiles,
   $opponentOver,
   $opponentScore,
   $opponentTiles,
@@ -76,6 +77,8 @@ export function GameView({
         if (engine.gameOver) {
           setOver(true);
           $myOver.set(true);
+          // Guardamos el tablero final para mostrarlo en el resultado.
+          $myTiles.set(result.finalTiles);
           onGameOver(engine.score);
         }
 

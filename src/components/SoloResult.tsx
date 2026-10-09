@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+import { useStore } from "@nanostores/react";
+import { $myTiles } from "@/stores/gameStore";
 import { ExitIcon, RefreshIcon, TrophyIcon } from "./icons";
+import { Board } from "./Board";
 
 interface SoloResultProps {
   score: number;
@@ -11,6 +14,8 @@ interface SoloResultProps {
 
 // Resultado del modo un jugador.
 export function SoloResult({ score, onReplay, onExit }: SoloResultProps) {
+  const myTiles = useStore($myTiles);
+
   // Un pequeno estallido de confeti al terminar.
   useEffect(() => {
     let cancelled = false;
@@ -43,6 +48,11 @@ export function SoloResult({ score, onReplay, onExit }: SoloResultProps) {
         <p className="text-5xl font-extrabold text-[var(--color-acento)]">
           {score}
         </p>
+
+        {/* Tablero final */}
+        <div className="mx-auto mt-6 max-w-[240px]">
+          <Board tiles={myTiles} compact />
+        </div>
 
         <div className="mt-7 space-y-3">
           <button

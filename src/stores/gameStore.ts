@@ -34,6 +34,7 @@ export const $countdownFrom = atom<number>(3);
 
 // Tableros y puntuaciones.
 export const $myScore = atom<number>(0);
+export const $myTiles = atom<Tile[]>([]);
 export const $opponentTiles = atom<Tile[]>([]);
 export const $opponentScore = atom<number>(0);
 export const $opponentOver = atom<boolean>(false);
@@ -58,6 +59,7 @@ export const $solo = atom<boolean>(false);
 // Reinicia el estado de la partida conservando la sala.
 export function resetMatchState(): void {
   $myScore.set(0);
+  $myTiles.set([]);
   $opponentTiles.set([]);
   $opponentScore.set(0);
   $opponentOver.set(false);

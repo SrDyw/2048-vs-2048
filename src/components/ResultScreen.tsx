@@ -4,12 +4,15 @@ import { useEffect } from "react";
 import { useStore } from "@nanostores/react";
 import {
   $busy,
+  $myTiles,
+  $opponentTiles,
   $rematchPending,
   $rematchRejected,
   $rematchRequested,
 } from "@/stores/gameStore";
 import { cn } from "@/lib/cn";
 import { CrownIcon, ExitIcon, RefreshIcon, SpinnerIcon } from "./icons";
+import { Board } from "./Board";
 
 interface ResultScreenProps {
   myScore: number;
@@ -33,6 +36,8 @@ export function ResultScreen({
   const rematchRejected = useStore($rematchRejected);
   const rematchPending = useStore($rematchPending);
   const busy = useStore($busy);
+  const myTiles = useStore($myTiles);
+  const opponentTiles = useStore($opponentTiles);
 
   const draw = myScore === opponentScore;
   const iWon = myScore > opponentScore;
@@ -96,6 +101,22 @@ export function ResultScreen({
             score={opponentScore}
             highlight={!draw && !iWon}
           />
+        </div>
+
+        {/* Tableros finales */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div>
+            <p className="mb-2 text-center text-xs uppercase tracking-widest text-[var(--color-texto-2)]">
+              Tu tablero
+            </p>
+            <Board tiles={myTiles} compact />
+          </div>
+          <div>
+            <p className="mb-2 text-center text-xs uppercase tracking-widest text-[var(--color-texto-2)]">
+              Tablero del rival
+            </p>
+            <Board tiles={opponentTiles} compact />
+          </div>
         </div>
 
         {rematchRejected ? (

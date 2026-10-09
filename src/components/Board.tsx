@@ -33,6 +33,10 @@ export function Board({ tiles, compact = false }: BoardProps) {
 
   const position = (index: number) => gap + index * (cell + gap);
 
+  // Orden estable por id: evita que React reordene nodos del DOM (lo que
+  // cancelaria las transiciones CSS y haria que el movimiento sea instantaneo).
+  const ordered = [...tiles].sort((a, b) => a.id - b.id);
+
   return (
     <div
       ref={containerRef}
@@ -60,7 +64,7 @@ export function Board({ tiles, compact = false }: BoardProps) {
 
       {/* Fichas */}
       {width > 0 &&
-        tiles.map((tile) => (
+        ordered.map((tile) => (
           <TileView
             key={tile.id}
             tile={tile}
