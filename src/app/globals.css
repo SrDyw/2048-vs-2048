@@ -1,0 +1,260 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Tokens de diseno (paleta pastel) expuestos a Tailwind v4.
+   Cada --color-* genera utilidades como bg-crema, text-acento, etc.
+   ============================================================ */
+@theme {
+  --color-crema: #faf6ee;
+  --color-tablero: #ded4c6;
+  --color-celda: #cec2b1;
+  --color-acento: #9b87e0;
+  --color-acento-2: #ef85a2;
+  --color-texto: #3d342c;
+  --color-texto-2: #857567;
+  --color-exito: #7fc95a;
+  --color-error: #e06262;
+
+  /* Colores de fichas (mas saturados) */
+  --color-tile-2: #f6e3c8;
+  --color-tile-4: #f4d096;
+  --color-tile-8: #f3ba6c;
+  --color-tile-16: #ef9a5f;
+  --color-tile-32: #e96f6f;
+  --color-tile-64: #d85a8c;
+  --color-tile-128: #a97fe0;
+  --color-tile-256: #6e9be8;
+  --color-tile-512: #4fcbb0;
+  --color-tile-1024: #7fc95a;
+  --color-tile-2048: #f0c530;
+
+  --font-sans: "Nunito", "Inter", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --font-display: "Baloo 2", "Nunito", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-tile: 12px;
+  --shadow-suave: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Reset minimo y base */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-crema);
+  color: var(--color-texto);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input {
+  font-family: inherit;
+}
+
+/* ============================================================
+   Colores de fichas por valor (aplicados via estilo inline en Tile)
+   ============================================================ */
+.tile-value-2 {
+  background-color: var(--color-tile-2);
+  color: #6b5b4a;
+}
+.tile-value-4 {
+  background-color: var(--color-tile-4);
+  color: #6b5b4a;
+}
+.tile-value-8 {
+  background-color: var(--color-tile-8);
+  color: #ffffff;
+}
+.tile-value-16 {
+  background-color: var(--color-tile-16);
+  color: #ffffff;
+}
+.tile-value-32 {
+  background-color: var(--color-tile-32);
+  color: #ffffff;
+}
+.tile-value-64 {
+  background-color: var(--color-tile-64);
+  color: #ffffff;
+}
+.tile-value-128 {
+  background-color: var(--color-tile-128);
+  color: #ffffff;
+}
+.tile-value-256 {
+  background-color: var(--color-tile-256);
+  color: #ffffff;
+}
+.tile-value-512 {
+  background-color: var(--color-tile-512);
+  color: #ffffff;
+}
+.tile-value-1024 {
+  background-color: var(--color-tile-1024);
+  color: #ffffff;
+}
+.tile-value-2048 {
+  background-color: var(--color-tile-2048);
+  color: #ffffff;
+}
+.tile-value-high {
+  background: linear-gradient(135deg, #a97fe0 0%, #ef85a2 50%, #f0c530 100%);
+  color: #ffffff;
+}
+
+/* ============================================================
+   Animaciones de fichas
+   ============================================================ */
+/* La ficha se posiciona con transform y se desliza con una curva ease-out.
+   Las fichas que no cambian de posicion conservan su transform, por lo que no
+   se animan; solo se mueven visualmente las que cambian de celda. */
+.tile {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-tile);
+  font-weight: 700;
+  user-select: none;
+  will-change: transform;
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Las fichas que se desplazan se dibujan por encima durante el movimiento. */
+.tile-moving {
+  z-index: 2;
+}
+
+/* Tablero del rival: misma animacion pero algo mas rapida */
+.board-compact .tile {
+  transition-duration: 130ms;
+}
+
+/* Aparicion de ficha nueva: solo fundido, sin escalado. */
+@keyframes tile-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.tile-new .tile-inner {
+  animation: tile-fade 180ms ease-out;
+}
+
+/* Bounce suave al fusionar (solo para fichas fusionadas).
+   Incluye una breve pausa inicial para que el deslizamiento termine antes
+   del "pop", y un unico overshoot suave (sin rebote hacia abajo). */
+@keyframes tile-merge-bounce {
+  0% {
+    transform: scale(1);
+  }
+  22% {
+    transform: scale(1);
+  }
+  62% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.tile-merge .tile-inner {
+  animation: tile-merge-bounce 240ms cubic-bezier(0.25, 1, 0.3, 1);
+}
+
+.tile-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-tile);
+}
+
+/* ============================================================
+   Countdown
+   ============================================================ */
+@keyframes count-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+.countdown-number {
+  animation: count-pop 900ms ease-out forwards;
+}
+
+/* ============================================================
+   Utilidades varias
+   ============================================================ */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-in {
+  animation: fade-in 240ms ease-out;
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+.pulse-soft {
+  animation: pulse-soft 1.6s ease-in-out infinite;
+}
+
+/* Respeto por preferencias de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  .tile,
+  .tile-new .tile-inner,
+  .tile-merge .tile-inner,
+  .countdown-number,
+  .fade-in,
+  .pulse-soft {
+    animation: none !important;
+    transition: none !important;
+  }
+}
