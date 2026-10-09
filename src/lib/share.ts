@@ -235,6 +235,11 @@ export async function renderShareCard(
   ctx.font = "800 46px Nunito, sans-serif";
   ctx.fillText(url.replace(/^https?:\/\//, ""), W / 2, fy + 20);
 
+  // Enlace al proyecto en GitHub.
+  ctx.fillStyle = TEXT_MUTED;
+  ctx.font = "600 30px Nunito, sans-serif";
+  ctx.fillText("github.com/SrDyw/2048-vs-2048", W / 2, H - 50);
+
   return await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (blob) resolve(blob);

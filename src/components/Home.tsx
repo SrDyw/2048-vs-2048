@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useStore } from "@nanostores/react";
 import { $bestSolo, $bestVs, $busy, $error, $playerName } from "@/stores/gameStore";
-import { CheckIcon, HistoryIcon, SpinnerIcon, TrophyIcon, UserIcon } from "./icons";
+import { CheckIcon, GithubIcon, HistoryIcon, SpinnerIcon, TrophyIcon, UserIcon } from "./icons";
 import { Logo } from "./Logo";
 import { HistoryModal } from "./HistoryModal";
 
@@ -159,6 +159,16 @@ export function Home({ onCreate, onJoin, onSolo }: HomeProps) {
           </li>
         ))}
       </ul>
+
+      <a
+        href="https://github.com/SrDyw/2048-vs-2048"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-6 flex items-center justify-center gap-2 text-sm text-[var(--color-texto-2)] hover:text-[var(--color-texto)] transition-colors"
+      >
+        <GithubIcon className="w-4 h-4" />
+        Ver el proyecto en GitHub
+      </a>
 
       <HistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} />
     </div>
